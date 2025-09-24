@@ -1,0 +1,707 @@
+openapi: 3.0.3
+info:
+  title: TaskManagement API
+  description: A comprehensive task management API with real-time collaboration features
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@taskmanagement.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Development server
+  - url: https://api.taskmanagement.com/api/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Create a new user account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - username
+                - password
+                - firstName
+                - lastName
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 30
+                  pattern: '^[a-zA-Z0-9_]+$'
+                  example: johndoe
+                password:
+                  type: string
+                  minLength: 8
+                  example: password123
+                firstName:
+                  type: string
+                  maxLength: 50
+                  example: John
+                lastName:
+                  type: string
+                  maxLength: 50
+                  example: Doe
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: User registered successfully
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      accessToken:
+                        type: string
+                        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                      refreshToken:
+                        type: string
+                        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: Authenticate user and return access tokens
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - emailOrUsername
+                - password
+              properties:
+                emailOrUsername:
+                  type: string
+                  example: user@example.com
+                password:
+                  type: string
+                  example: password123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Login successful
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      accessToken:
+                        type: string
+                        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                      refreshToken:
+                        type: string
+                        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /projects:
+    get:
+      tags:
+        - Projects
+      summary: Get user projects
+      description: Retrieve all projects for the authenticated user
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, archived, completed]
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+      responses:
+        '200':
+          description: Projects retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      projects:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Project'
+                      total:
+                        type: integer
+                        example: 25
+                      page:
+                        type: integer
+                        example: 1
+                      pages:
+                        type: integer
+                        example: 3
+
+    post:
+      tags:
+        - Projects
+      summary: Create a new project
+      description: Create a new project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                  example: My Project
+                description:
+                  type: string
+                  maxLength: 500
+                  example: A sample project
+                color:
+                  type: string
+                  pattern: '^#[0-9A-F]{6}$'
+                  example: '#3b82f6'
+                settings:
+                  type: object
+                  properties:
+                    isPublic:
+                      type: boolean
+                      default: false
+                    allowMemberInvites:
+                      type: boolean
+                      default: true
+                    defaultTaskStatus:
+                      type: string
+                      maxLength: 50
+                      example: pending
+                    taskLabels:
+                      type: array
+                      items:
+                        type: string
+                        maxLength: 50
+      responses:
+        '201':
+          description: Project created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Project created successfully
+                  data:
+                    type: object
+                    properties:
+                      project:
+                        $ref: '#/components/schemas/Project'
+
+  /tasks:
+    get:
+      tags:
+        - Tasks
+      summary: Get user tasks
+      description: Retrieve all tasks for the authenticated user
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: projectId
+          in: query
+          schema:
+            type: string
+            format: objectId
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, in_progress, completed, cancelled]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high, urgent]
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+      responses:
+        '200':
+          description: Tasks retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      tasks:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Task'
+                      total:
+                        type: integer
+                        example: 50
+                      page:
+                        type: integer
+                        example: 1
+                      pages:
+                        type: integer
+                        example: 3
+
+    post:
+      tags:
+        - Tasks
+      summary: Create a new task
+      description: Create a new task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - projectId
+              properties:
+                title:
+                  type: string
+                  maxLength: 200
+                  example: Complete user authentication
+                description:
+                  type: string
+                  maxLength: 2000
+                  example: Implement JWT-based authentication
+                priority:
+                  type: string
+                  enum: [low, medium, high, urgent]
+                  default: medium
+                projectId:
+                  type: string
+                  format: objectId
+                assigneeId:
+                  type: string
+                  format: objectId
+                dueDate:
+                  type: string
+                  format: date-time
+                labels:
+                  type: array
+                  items:
+                    type: string
+                    maxLength: 50
+                estimatedHours:
+                  type: number
+                  minimum: 0
+                  maximum: 999
+                subtasks:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                        maxLength: 200
+                      completed:
+                        type: boolean
+                        default: false
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Task created successfully
+                  data:
+                    type: object
+                    properties:
+                      task:
+                        $ref: '#/components/schemas/Task'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: objectId
+          example: 507f1f77bcf86cd799439011
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        username:
+          type: string
+          example: johndoe
+        firstName:
+          type: string
+          example: John
+        lastName:
+          type: string
+          example: Doe
+        avatar:
+          type: string
+          nullable: true
+          example: https://example.com/avatar.jpg
+        role:
+          type: string
+          enum: [admin, user]
+          example: user
+        isEmailVerified:
+          type: boolean
+          example: false
+        preferences:
+          type: object
+          properties:
+            theme:
+              type: string
+              enum: [light, dark, system]
+              example: system
+            notifications:
+              type: object
+              properties:
+                email:
+                  type: boolean
+                  example: true
+                push:
+                  type: boolean
+                  example: true
+                taskUpdates:
+                  type: boolean
+                  example: true
+                projectUpdates:
+                  type: boolean
+                  example: true
+            language:
+              type: string
+              example: en
+            timezone:
+              type: string
+              example: UTC
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Project:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: objectId
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+          example: My Project
+        description:
+          type: string
+          nullable: true
+          example: A sample project
+        color:
+          type: string
+          example: '#3b82f6'
+        status:
+          type: string
+          enum: [active, archived, completed]
+          example: active
+        ownerId:
+          type: string
+          format: objectId
+          example: 507f1f77bcf86cd799439011
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectMember'
+        settings:
+          type: object
+          properties:
+            isPublic:
+              type: boolean
+              example: false
+            allowMemberInvites:
+              type: boolean
+              example: true
+            defaultTaskStatus:
+              type: string
+              example: pending
+            taskLabels:
+              type: array
+              items:
+                type: string
+              example: [bug, feature, enhancement]
+        statistics:
+          type: object
+          properties:
+            totalTasks:
+              type: integer
+              example: 25
+            completedTasks:
+              type: integer
+              example: 10
+            overdueTasks:
+              type: integer
+              example: 3
+            membersCount:
+              type: integer
+              example: 5
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProjectMember:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: objectId
+          example: 507f1f77bcf86cd799439011
+        role:
+          type: string
+          enum: [owner, admin, member, viewer]
+          example: member
+        joinedAt:
+          type: string
+          format: date-time
+        permissions:
+          type: object
+          properties:
+            canEdit:
+              type: boolean
+              example: false
+            canDelete:
+              type: boolean
+              example: false
+            canInvite:
+              type: boolean
+              example: false
+            canManageTasks:
+              type: boolean
+              example: true
+
+    Task:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: objectId
+          example: 507f1f77bcf86cd799439011
+        title:
+          type: string
+          example: Complete user authentication
+        description:
+          type: string
+          nullable: true
+          example: Implement JWT-based authentication
+        status:
+          type: string
+          enum: [pending, in_progress, completed, cancelled]
+          example: pending
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          example: medium
+        projectId:
+          type: string
+          format: objectId
+          example: 507f1f77bcf86cd799439011
+        assigneeId:
+          type: string
+          format: objectId
+          nullable: true
+          example: 507f1f77bcf86cd799439011
+        createdById:
+          type: string
+          format: objectId
+          example: 507f1f77bcf86cd799439011
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        labels:
+          type: array
+          items:
+            type: string
+          example: [bug, feature]
+        attachments:
+          type: array
+          items:
+            type: object
+        subtasks:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              completed:
+                type: boolean
+              completedAt:
+                type: string
+                format: date-time
+                nullable: true
+        estimatedHours:
+          type: number
+          nullable: true
+          example: 8
+        actualHours:
+          type: number
+          nullable: true
+          example: 6
+        position:
+          type: integer
+          example: 0
+        isArchived:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              example: Validation failed
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    example: email
+                  message:
+                    type: string
+                    example: Invalid email format
