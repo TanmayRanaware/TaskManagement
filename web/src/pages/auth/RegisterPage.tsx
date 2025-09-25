@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { Check, X } from 'lucide-react'
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('')
@@ -13,6 +14,17 @@ export default function RegisterPage() {
   
   const { register, error, clearError } = useAuthStore()
   const navigate = useNavigate()
+
+  // Password validation
+  const passwordValidation = {
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number: /[0-9]/.test(password),
+    special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+  }
+
+  const isPasswordValid = Object.values(passwordValidation).every(Boolean)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,8 +41,21 @@ export default function RegisterPage() {
       await register(email, name, password)
       toast.success('Account created successfully!')
       navigate('/dashboard')
-    } catch (error) {
-      toast.error('Registration failed. Please try again.')
+    } catch (error: any) {
+      const errorCode = error?.response?.data?.error?.code
+      let errorMessage = 'Registration failed. Please try again.'
+      
+      if (errorCode === 'USER_EXISTS') {
+        errorMessage = 'An account with this email already exists. Please use a different email or try logging in.'
+      } else if (errorCode === 'PASSWORD_WEAK') {
+        errorMessage = 'Password does not meet security requirements. Please check the requirements below.'
+      } else if (errorCode === 'AUTH_RATE_LIMIT_EXCEEDED') {
+        errorMessage = 'Too many registration attempts. Please wait a few minutes and try again.'
+      } else if (error?.response?.data?.error?.message) {
+        errorMessage = error.response.data.error.message
+      }
+      
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -105,6 +130,31 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              <div className="mt-2 text-xs">
+                <p className="text-gray-700 font-medium mb-2">Password requirements:</p>
+                <ul className="space-y-1">
+                  <li className={`flex items-center gap-2 ${passwordValidation.length ? 'text-green-600' : 'text-gray-500'}`}>
+                    {passwordValidation.length ? <Check size={14} /> : <X size={14} />}
+                    At least 8 characters
+                  </li>
+                  <li className={`flex items-center gap-2 ${passwordValidation.uppercase ? 'text-green-600' : 'text-gray-500'}`}>
+                    {passwordValidation.uppercase ? <Check size={14} /> : <X size={14} />}
+                    One uppercase letter
+                  </li>
+                  <li className={`flex items-center gap-2 ${passwordValidation.lowercase ? 'text-green-600' : 'text-gray-500'}`}>
+                    {passwordValidation.lowercase ? <Check size={14} /> : <X size={14} />}
+                    One lowercase letter
+                  </li>
+                  <li className={`flex items-center gap-2 ${passwordValidation.number ? 'text-green-600' : 'text-gray-500'}`}>
+                    {passwordValidation.number ? <Check size={14} /> : <X size={14} />}
+                    One number
+                  </li>
+                  <li className={`flex items-center gap-2 ${passwordValidation.special ? 'text-green-600' : 'text-gray-500'}`}>
+                    {passwordValidation.special ? <Check size={14} /> : <X size={14} />}
+                    One special character
+                  </li>
+                </ul>
+              </div>
             </div>
             
             <div>
@@ -134,8 +184,8 @@ export default function RegisterPage() {
           <div>
             <Button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-              disabled={isLoading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:bg-gray-400 disabled:cursor-not-allowed"
+              disabled={isLoading || !isPasswordValid || password !== confirmPassword}
             >
               {isLoading ? 'Creating account...' : 'Create account'}
             </Button>

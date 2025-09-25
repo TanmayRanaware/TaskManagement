@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('tanmay@gmail.com')
+  const [password, setPassword] = useState('MyPassword123!')
   const [isLoading, setIsLoading] = useState(false)
   
   const { login, error, clearError } = useAuthStore()
@@ -24,8 +24,9 @@ export default function LoginPage() {
       await login(email, password)
       toast.success('Login successful!')
       navigate(from, { replace: true })
-    } catch (error) {
-      toast.error('Login failed. Please check your credentials.')
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.error?.message || error?.message || 'Login failed. Please check your credentials.'
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }

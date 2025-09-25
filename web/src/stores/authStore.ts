@@ -57,7 +57,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         
         try {
           const response = await authApi.login(email, password)
-          const { user, tokens } = response.data
+          const { user, tokens } = response.data.data
           
           set({
             user,
@@ -67,9 +67,10 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             error: null,
           })
         } catch (error: any) {
+          const errorMessage = error.response?.data?.error?.message || error.message || 'Login failed'
           set({
             isLoading: false,
-            error: error.response?.data?.error?.message || 'Login failed',
+            error: errorMessage,
           })
           throw error
         }
@@ -80,7 +81,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         
         try {
           const response = await authApi.register(email, name, password)
-          const { user, tokens } = response.data
+          const { user, tokens } = response.data.data
           
           set({
             user,
@@ -90,9 +91,10 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             error: null,
           })
         } catch (error: any) {
+          const errorMessage = error.response?.data?.error?.message || error.message || 'Registration failed'
           set({
             isLoading: false,
-            error: error.response?.data?.error?.message || 'Registration failed',
+            error: errorMessage,
           })
           throw error
         }
